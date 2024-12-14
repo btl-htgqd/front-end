@@ -4,16 +4,84 @@ import axios from "axios";
 import Banner from "@/components/Banner";
 
 const Home: React.FC = () => {
-    // State để lưu thông tin form và kết quả tour
     const [priceStart, setPriceStart] = useState<number>(0);
     const [priceEnd, setPriceEnd] = useState<number>(10000000);
     const [timeStart, setTimeStart] = useState<string>("2024-01-01");
     const [timeEnd, setTimeEnd] = useState<string>("2024-12-13");
     const [region, setRegion] = useState<string>("Du lịch Trong Nước");
-    const [selectedRegion, setSelectedRegion] = useState<'Bắc' | 'Trung' | 'Nam' | "">(""); // Type as one of the valid regions or empty string
+    const [selectedRegion, setSelectedRegion] = useState<'Bắc' | 'Trung' | 'Nam' | "">("");
     const [selectedProvince, setSelectedProvince] = useState<string>("");
     const [tours, setTours] = useState<any[]>([]);
     const [loading, setLoading] = useState<boolean>(false);
+    const [data, setData] = useState(null);
+    const [error, setError] = useState<string | null>(null);
+
+    const handleStartProcess = async () => {
+        setLoading(true);
+        setError(null);
+
+        try {
+            const dataNormalResponse = await axios.get(`http://localhost:3001/api/calculation/data-normal?priceStart=${priceStart}&priceEnd=${priceEnd}&timeStart=${timeStart}&timeEnd=${timeEnd}&region=${encodeURIComponent(region)}`);
+            console.log('Step 1 Result:', dataNormalResponse.data);
+
+            const weighteDataResponse = await axios.get('http://localhost:3001/api/calculation/weighted-data', dataNormalResponse.data);
+            console.log('Step 2 Result:', weighteDataResponse.data);
+
+            const solutionResponse = await axios.get('http://localhost:3001/api/calculation/solution', weighteDataResponse.data);
+            console.log('Step 3 Result:', solutionResponse.data);
+
+            const distanceResponse = await axios.get('http://localhost:3001/api/calculation/distance', {
+                weightedNormalizedData: weighteDataResponse.data,
+                idealSolution: solutionResponse.data.idealSolution,
+                negativeIdealSolution: solutionResponse.data.negativeIdealSolution,
+            });
+            console.log('Step 4 Result:', distanceResponse.data);
+
+            const rankingResponse = await axios.get('http://localhost:3001/api/calculation/ranking', distanceResponse.data);
+            console.log('Step 5 Result:', rankingResponse.data);
+
+            const topsisResponse = await axios.get(`http://localhost:3001/api/calculation/topsis?priceStart=${priceStart}&priceEnd=${priceEnd}&timeStart=${timeStart}&timeEnd=${timeEnd}&region=${encodeURIComponent(region)}`);
+
+            console.log('Step 6 Result:', topsisResponse.data);
+
+            setData(topsisResponse.data);
+        } catch (err) {
+            setError('An error occurred during the process.');
+            console.error(err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleSearch = async () => {
+        setLoading(true);
+        const url = `http://localhost:3001/api/tour/search?priceStart=${priceStart}&priceEnd=${priceEnd}&timeStart=${timeStart}&timeEnd=${timeEnd}&region=${encodeURIComponent(region)}`;
+
+        try {
+            const response = await fetch(url);
+            const data = await response.json();
+            setTours(data);
+        } catch (error) {
+            console.error('Error fetching tours:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleRegionChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const selectedRegion = e.target.value as 'Bắc' | 'Trung' | 'Nam' | '';
+        setSelectedRegion(selectedRegion);
+        setRegion(e.target.value);
+
+        if (e.target.value === "Du lịch Trong Nước") {
+            setPriceStart(1000000);
+            setPriceEnd(10000000 + 1000000);
+        } else if (e.target.value === "Du lịch Ngoài Nước") {
+            setPriceStart(10000000);
+            setPriceEnd(10000000 + 10000000);
+        }
+    };
+
 
     // Hàm xử lý khi người dùng nhấn nút tìm kiếm
     const provinces = {
@@ -36,39 +104,6 @@ const Home: React.FC = () => {
             "Hồ Chí Minh", "Kiên Giang", "Long An", "Nam Định", "Ninh Bình", "Phú Yên",
             "Sóc Trăng", "Sơn La", "Tây Ninh", "Tiền Giang", "Trà Vinh", "Vĩnh Long"
         ]
-    };
-
-
-    const handleSearch = async () => {
-        setLoading(true);
-        const url = `http://localhost:3001/api/tour/search?priceStart=${priceStart}&priceEnd=${priceEnd}&timeStart=${timeStart}&timeEnd=${timeEnd}&region=${encodeURIComponent(region)}`;
-
-        try {
-            const response = await fetch(url);
-            const data = await response.json();
-            setTours(data);  // Giả sử API trả về danh sách tour
-        } catch (error) {
-            console.error('Error fetching tours:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
-    const handleRegionChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        // Explicitly type the value to match the expected types
-        setSelectedRegion(e.target.value as 'Bắc' | 'Trung' | 'Nam' | '');
-        const handleRegionChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-            const selectedRegion = e.target.value;
-            setRegion(selectedRegion);
-
-            // Cộng giá trị vào priceStart và priceEnd khi thay đổi khu vực
-            if (selectedRegion === 'Du lịch Trong Nước') {
-                setPriceStart(1000000);
-                setPriceEnd(10000000 + 1000000);
-            } else if (selectedRegion === 'Du lịch Ngoài Nước') {
-                setPriceStart(10000000);
-                setPriceEnd(10000000 + 10000000);
-            }
-        };
     };
     return (
         <div className="mx-auto">
@@ -179,12 +214,18 @@ const Home: React.FC = () => {
                     {/* Nút tìm kiếm */}
                     <div>
                         <button
-                            onClick={handleSearch}
+                            onClick={async () => {
+                                await handleStartProcess(); // Gọi handleStartProcess ngay sau đó nếu cần
+                                await handleSearch();
+                            }}
                             className="bg-[#38CB89] text-white p-3 rounded w-full"
                             disabled={loading}
                         >
                             {loading ? "Đang tìm kiếm..." : "Tìm kiếm"}
                         </button>
+
+                        {error && <p style={{ color: 'red' }}>{error}</p>}
+                        {data && <pre>{JSON.stringify(data, null, 2)}</pre>}
                     </div>
                 </div>
 
