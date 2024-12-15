@@ -24,20 +24,20 @@ const Home: React.FC = () => {
             const dataNormalResponse = await axios.get(`http://localhost:3001/api/calculation/data-normal?priceStart=${priceStart}&priceEnd=${priceEnd}&timeStart=${timeStart}&timeEnd=${timeEnd}&region=${encodeURIComponent(region)}`);
             console.log('Step 1 Result:', dataNormalResponse.data);
 
-            const weighteDataResponse = await axios.get('http://localhost:3001/api/calculation/weighted-data', dataNormalResponse.data);
+            const weighteDataResponse = await axios.post('http://localhost:3001/api/calculation/weighted-data',  dataNormalResponse.data);
             console.log('Step 2 Result:', weighteDataResponse.data);
 
-            const solutionResponse = await axios.get('http://localhost:3001/api/calculation/solution', weighteDataResponse.data);
+            const solutionResponse = await axios.post('http://localhost:3001/api/calculation/solution', weighteDataResponse.data);
             console.log('Step 3 Result:', solutionResponse.data);
 
-            const distanceResponse = await axios.get('http://localhost:3001/api/calculation/distance', {
+            const distanceResponse = await axios.post('http://localhost:3001/api/calculation/distance', {
                 weightedNormalizedData: weighteDataResponse.data,
                 idealSolution: solutionResponse.data.idealSolution,
                 negativeIdealSolution: solutionResponse.data.negativeIdealSolution,
             });
             console.log('Step 4 Result:', distanceResponse.data);
 
-            const rankingResponse = await axios.get('http://localhost:3001/api/calculation/ranking', distanceResponse.data);
+            const rankingResponse = await axios.post('http://localhost:3001/api/calculation/ranking', distanceResponse.data);
             console.log('Step 5 Result:', rankingResponse.data);
 
             const topsisResponse = await axios.get(`http://localhost:3001/api/calculation/topsis?priceStart=${priceStart}&priceEnd=${priceEnd}&timeStart=${timeStart}&timeEnd=${timeEnd}&region=${encodeURIComponent(region)}`);
