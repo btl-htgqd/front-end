@@ -19,32 +19,59 @@ const Home: React.FC = () => {
     const handleStartProcess = async () => {
         setLoading(true);
         setError(null);
+        setData(null);  // Đảm bảo dữ liệu cũ được xóa trước khi bắt đầu quá trình mới
 
         try {
-            const dataNormalResponse = await axios.get(`http://localhost:3001/api/calculation/data-normal?priceStart=${priceStart}&priceEnd=${priceEnd}&timeStart=${timeStart}&timeEnd=${timeEnd}&region=${encodeURIComponent(region)}`);
-            console.log('Step 1 Result:', dataNormalResponse.data);
+            // API 1: Lấy toàn bộ dữ liệu
+            const dataNormalResponse = await axios.get(
+                `http://localhost:3001/api/calculation/data-normal?priceStart=${priceStart}&priceEnd=${priceEnd}&timeStart=${timeStart}&timeEnd=${timeEnd}&region=${encodeURIComponent(region)}`
+            );
+            const allData = dataNormalResponse.data;
+            const limitedData = allData.slice(0, 20); // Lấy 200 dữ liệu
+            const normalizeData = limitedData.map(item => item.normalized); // Lấy phần weighted
 
-            const weighteDataResponse = await axios.get('http://localhost:3001/api/calculation/weighted-data', dataNormalResponse.data);
-            console.log('Step 2 Result:', weighteDataResponse.data);
+            console.log('Step 1 Result (Limited to 200 items):', limitedData);
 
-            const solutionResponse = await axios.get('http://localhost:3001/api/calculation/solution', weighteDataResponse.data);
-            console.log('Step 3 Result:', solutionResponse.data);
+            // API 2: Lấy phần `weighted` (Chỉ lấy phần weighted)
+            const weighteDataResponse = await axios.post('http://localhost:3001/api/calculation/weighted-data', limitedData);
+            const weightedData = weighteDataResponse.data.map(item => item.weighted); // Lấy phần weighted
+            console.log('Step 2 Result (Weighted only):', weightedData);
 
-            const distanceResponse = await axios.get('http://localhost:3001/api/calculation/distance', {
+            // API 3: Lấy toàn bộ dữ liệu giải pháp
+            const solutionResponse = await axios.post('http://localhost:3001/api/calculation/solution', weighteDataResponse.data);
+            console.log('Step 3 Result (Solution):', solutionResponse.data);
+
+            // API 4: Lấy 2 phần "distancePositive" và "distanceNegative"
+            const distanceData = {
                 weightedNormalizedData: weighteDataResponse.data,
                 idealSolution: solutionResponse.data.idealSolution,
                 negativeIdealSolution: solutionResponse.data.negativeIdealSolution,
-            });
-            console.log('Step 4 Result:', distanceResponse.data);
+            };
+            const distanceResponse = await axios.post('http://localhost:3001/api/calculation/distance', distanceData);
+            const distanceValues = distanceResponse.data.map(item => ({
+                distancePositive: item.distancePositive,
+                distanceNegative: item.distanceNegative
+            }));
+            console.log('Step 4 Result (Distance Positive & Negative):', distanceValues);
 
-            const rankingResponse = await axios.get('http://localhost:3001/api/calculation/ranking', distanceResponse.data);
-            console.log('Step 5 Result:', rankingResponse.data);
+            // API 5: Lấy phần "score"
+            const rankingResponse = await axios.post('http://localhost:3001/api/calculation/ranking', distanceResponse.data);
+            const score = rankingResponse.data.map(item => item.score);
+            console.log('Step 5 Result (Score):', score);
 
+            // API 6: Lấy toàn bộ dữ liệu topsis
             const topsisResponse = await axios.get(`http://localhost:3001/api/calculation/topsis?priceStart=${priceStart}&priceEnd=${priceEnd}&timeStart=${timeStart}&timeEnd=${timeEnd}&region=${encodeURIComponent(region)}`);
-
-            console.log('Step 6 Result:', topsisResponse.data);
-
-            setData(topsisResponse.data);
+            console.log('Step 6 Result (Topsis):', topsisResponse.data);
+            const limitedDataTopsis = topsisResponse.data.slice(0, 10); // Lấy 200 dữ liệu
+            // Set dữ liệu cần hiển thị
+            setData({
+                solutionResponse: solutionResponse.data,
+                normalize: normalizeData,
+                topsis: limitedDataTopsis,
+                weightedData: weightedData,
+                distanceValues: distanceValues,
+                score: score,
+            });
         } catch (err) {
             setError('An error occurred during the process.');
             console.error(err);
@@ -52,6 +79,7 @@ const Home: React.FC = () => {
             setLoading(false);
         }
     };
+
 
     const handleSearch = async () => {
         setLoading(true);
@@ -225,7 +253,35 @@ const Home: React.FC = () => {
                         </button>
 
                         {error && <p style={{ color: 'red' }}>{error}</p>}
-                        {data && <pre>{JSON.stringify(data, null, 2)}</pre>}
+
+                        {data && (
+                            <div>
+
+                                <h3 className="text-2xl font-bold">Bước 1 (Nolmarlize):</h3>
+                                {/* Hiển thị chỉ phần weightedData */}
+                                <pre>{JSON.stringify(data.normalize, null, 2)}</pre>
+
+                                <h3 className="text-2xl font-bold">Bước 2 (Weighted):</h3>
+                                {/* Hiển thị chỉ phần weightedData */}
+                                <pre>{JSON.stringify(data.weightedData, null, 2)}</pre>
+
+                                <h3 className="text-2xl font-bold">Bước 3:</h3>
+                                {/* Hiển thị chỉ phần weightedData */}
+                                <pre>{JSON.stringify(data.solutionResponse, null, 2)}</pre>
+
+                                <h3 className="text-2xl font-bold">Bước 4 (Distance Positive & Negative):</h3>
+                                {/* Hiển thị chỉ phần distancePositive và distanceNegative */}
+                                <pre>{JSON.stringify(data.distanceValues, null, 2)}</pre>
+
+                                <h3 className="text-2xl font-bold">Bước 5 (Score):</h3>
+                                {/* Hiển thị chỉ phần score */}
+                                <pre>{JSON.stringify(data.score, null, 2)}</pre>
+
+                                <h3 className="text-2xl font-bold">Bước 6 (Topsis):</h3>
+                                {/* Hiển thị toàn bộ dữ liệu của topsis */}
+                                <pre>{JSON.stringify(data.topsis, null, 2)}</pre>
+                            </div>
+                        )}
                     </div>
                 </div>
 
