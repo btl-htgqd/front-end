@@ -24,7 +24,7 @@ const Home: React.FC = () => {
         try {
             // API 1: Lấy toàn bộ dữ liệu
             const dataNormalResponse = await axios.get(
-                `http://localhost:3001/api/calculation/data-normal?priceStart=${priceStart}&priceEnd=${priceEnd}&timeStart=${timeStart}&timeEnd=${timeEnd}&region=${encodeURIComponent(region)}/${encodeURIComponent(selectedRegion || '')}/${encodeURIComponent(selectedProvince || '')}`
+                `http://localhost:3001/api/calculation/data-normal?priceStart=${priceStart}&priceEnd=${priceEnd}&timeStart=${timeStart}&timeEnd=${timeEnd}&region=${encodeURIComponent(region)}`
             );
             const allData = dataNormalResponse.data;
             const limitedData = allData.slice(0, 20); // Lấy 200 dữ liệu
@@ -57,7 +57,7 @@ const Home: React.FC = () => {
             console.log('Step 5 Result (Score):', score);
 
             // API 6: Lấy toàn bộ dữ liệu topsis
-            const topsisResponse = await axios.get(`http://localhost:3001/api/calculation/topsis?priceStart=${priceStart}&priceEnd=${priceEnd}&timeStart=${timeStart}&timeEnd=${timeEnd}&region=${encodeURIComponent(region)}&area=${encodeURIComponent(selectedRegion)}&province=${encodeURIComponent(selectedProvince)}`);
+            const topsisResponse = await axios.get(`http://localhost:3001/api/calculation/topsis?priceStart=${priceStart}&priceEnd=${priceEnd}&timeStart=${timeStart}&timeEnd=${timeEnd}&region=${encodeURIComponent(region)}`);
             console.log('Step 6 Result (Topsis):', topsisResponse.data);
             const limitedDataTopsis = topsisResponse.data.slice(0, 10); // Lấy 200 dữ liệu
             // Set dữ liệu cần hiển thị
@@ -80,7 +80,7 @@ const Home: React.FC = () => {
 
     const handleSearch = async () => {
         setLoading(true);
-        const url = `http://localhost:3001/api/tour/search?priceStart=${priceStart}&priceEnd=${priceEnd}&timeStart=${timeStart}&timeEnd=${timeEnd}&region=${encodeURIComponent(region)}/${encodeURIComponent(selectedRegion || '')}/${encodeURIComponent(selectedProvince || '')}`;
+        const url = `http://localhost:3001/api/tour/search?priceStart=${priceStart}&priceEnd=${priceEnd}&timeStart=${timeStart}&timeEnd=${timeEnd}&region=${encodeURIComponent(region)}`;
 
         try {
             const response = await fetch(url);
@@ -110,20 +110,20 @@ const Home: React.FC = () => {
 
     // Hàm xử lý khi người dùng nhấn nút tìm kiếm
     const provinces = {
-        "Du lịch miền Bắc": [
+        Bắc: [
             "Bắc Giang", "Bắc Kạn", "Bắc Ninh", "Cao Bằng", "Điện Biên", "Hà Giang",
             "Hà Nam", "Hà Nội", "Hải Dương", "Hải Phòng", "Hòa Bình", "Hưng Yên",
             "Lai Châu", "Lạng Sơn", "Lào Cai", "Nam Định", "Nghệ An", "Ninh Bình",
             "Phú Thọ", "Quảng Ninh", "Sơn La", "Thái Bình", "Thái Nguyên", "Tuyên Quang",
             "Vĩnh Phúc", "Yên Bái"
         ],
-        "Du lịch miền Trung": [
+        Trung: [
             "Bình Định", "Bình Thuận", "Đà Nẵng", "Đắk Lắk", "Đắk Nông", "Gia Lai",
             "Hà Tĩnh", "Khánh Hòa", "Kon Tum", "Lâm Đồng", "Nghệ An", "Ninh Thuận",
             "Phú Yên", "Quảng Bình", "Quảng Nam", "Quảng Ngãi", "Quảng Ninh", "Quảng Trị",
             "Thanh Hóa", "Thừa Thiên Huế"
         ],
-        "Du lịch miền Nam": [
+        Nam: [
             "An Giang", "Bà Rịa Vũng Tàu", "Bạc Liêu", "Bến Tre", "Bình Dương", "Bình Phước",
             "Bình Thuận", "Cà Mau", "Cần Thơ", "Đồng Nai", "Đồng Tháp", "Hậu Giang",
             "Hồ Chí Minh", "Kiên Giang", "Long An", "Nam Định", "Ninh Bình", "Phú Yên",
@@ -189,7 +189,6 @@ const Home: React.FC = () => {
                                 setRegion(e.target.value);
                                 if (e.target.value === "Du lịch Trong Nước") {
                                     setSelectedRegion("");
-                                    setSelectedProvince(""); // Reset tỉnh khi đổi khu vực
                                 }
                             }}
                             className="border p-2 rounded w-full"
@@ -200,28 +199,7 @@ const Home: React.FC = () => {
                     </div>
 
                     {/* Nếu chọn "Trong Nước" thì hiển thị thêm các lựa chọn miền */}
-                    {region === "Du lịch Trong Nước" && (
-                        <>
-                            <div>
-                                <label className="block font-medium mb-2">Miền</label>
-                                <select
-                                    value={selectedRegion}
-                                    onChange={(e) => {
-                                        setSelectedRegion(e.target.value);
-                                        setSelectedProvince(""); // Reset tỉnh khi đổi miền
-                                    }}
-                                    className="w-full border p-2 rounded-lg"
-                                >
-                                    <option value="">Chọn miền</option>
-                                    <option value="Du lịch miền Bắc">Bắc</option>
-                                    <option value="Du lịch miền Trung">Trung</option>
-                                    <option value="Du lịch miền Nam">Nam</option>
-                                </select>
-                            </div>
-                            
-                        </>
-                    )}
-
+                    
                     {/* Nút tìm kiếm */}
                     <div>
                         <button
