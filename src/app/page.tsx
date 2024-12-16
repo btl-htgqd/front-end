@@ -43,6 +43,7 @@ const Home: React.FC = () => {
 
             // API 4: Lấy 2 phần "distancePositive" và "distanceNegative"
             const distanceData = {
+
                 weightedNormalizedData: weighteDataResponse.data,
                 idealSolution: solutionResponse.data.idealSolution,
                 negativeIdealSolution: solutionResponse.data.negativeIdealSolution,
